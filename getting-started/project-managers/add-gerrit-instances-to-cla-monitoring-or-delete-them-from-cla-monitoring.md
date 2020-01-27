@@ -78,9 +78,9 @@ If you already added a Gerrit instance during the CLA onboarding process, skip t
 
   **groups** - If the Group-Name value that you specified in the project.config file does not exist in this file, add it to this file, and then save the file.
 
-1. Provide these files and Gerrit configuration to the Linux Foundation Release Engineering team to finish configuration.
+* Provide these files and Gerrit configuration to the Linux Foundation Release Engineering team to finish configuration.
 
-   The CLA Management Console shows the repositories that the CLA application will monitor.
+  The CLA Management Console shows the repositories that the CLA application will monitor.
 
 To delete an instance from monitoring, click **DELETE** next to the instance that you want to delete. A confirmation dialog appears. Click **DELETE**.
 
