@@ -28,7 +28,7 @@ The following diagram illustrates the EasyCLA release process:
 
 ## EasyCLA Architechture
 
-The following diagram explains the EasyCLA architecture.
+The following diagram explains the EasyCLA architecture. 
 
 ![](../.gitbook/assets/architecture-overview.png)
 
