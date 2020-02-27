@@ -1,7 +1,7 @@
 # Table of contents
 
 * [Introduction to EasyCLA](README.md)
-* [Getting Started](getting-started/README.md)
+* [CNCF Certification](getting-started/README.md)
   * [EasyCLA Requirements](getting-started/easycla-requirements.md)
   * [Get Access to EasyCLA](getting-started/get-access-to-easycla.md)
   * [CLA Troubleshooting](getting-started/cla-troubleshooting/README.md)

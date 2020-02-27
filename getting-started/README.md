@@ -1,4 +1,6 @@
-# Getting Started
+# CNCF Certification
+
+## ![](../.gitbook/assets/vilt.png) 
 
 ## What is EasyCLA?
 
