@@ -1,6 +1,12 @@
+---
+description: dddd
+---
+
 # Introduction to EasyCLA
 
 [![CircleCI](https://circleci.com/gh/communitybridge/easycla.svg?style=svg)](https://circleci.com/gh/communitybridge/easycla)
+
+![](.gitbook/assets/vilt%20%281%29.png)
 
 The Contributor License Agreement \(CLA\) service of the Linux Foundation lets project contributors read, sign, and submit contributor license agreements easily.
 
