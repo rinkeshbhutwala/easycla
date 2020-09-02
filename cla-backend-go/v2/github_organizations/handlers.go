@@ -121,12 +121,10 @@ func Configure(api *operations.EasyclaAPI, service Service, eventService events.
 				})
 			}
 
-			fmt.Printf("enter in update")
 			err := service.UpdateGithubOrganization(params.ProjectSFID, params.OrgName, *params.Body.AutoEnabled)
 			if err != nil {
 				return github_organizations.NewUpdateProjectGithubOrganizationConfigBadRequest().WithPayload(errorResponse(err))
 			}
-			fmt.Printf("enter in log events")
 			eventService.LogEvent(&events.LogEventArgs{
 				LfUsername:        authUser.UserName,
 				EventType:         events.GithubOrganizationUpdated,
