@@ -8,6 +8,7 @@ import (
 
 	"github.com/LF-Engineering/lfx-kit/auth"
 	"github.com/communitybridge/easycla/cla-backend-go/events"
+	v1Models "github.com/communitybridge/easycla/cla-backend-go/gen/models"
 	"github.com/communitybridge/easycla/cla-backend-go/gen/v2/models"
 	"github.com/communitybridge/easycla/cla-backend-go/gen/v2/restapi/operations"
 	"github.com/communitybridge/easycla/cla-backend-go/gen/v2/restapi/operations/github_organizations"
@@ -120,15 +121,17 @@ func Configure(api *operations.EasyclaAPI, service Service, eventService events.
 				})
 			}
 
+			fmt.Printf("enter in update")
 			err := service.UpdateGithubOrganization(params.ProjectSFID, params.OrgName, *params.Body.AutoEnabled)
 			if err != nil {
 				return github_organizations.NewUpdateProjectGithubOrganizationConfigBadRequest().WithPayload(errorResponse(err))
 			}
-
+			fmt.Printf("enter in log events")
 			eventService.LogEvent(&events.LogEventArgs{
-				UserID:            authUser.UserName,
+				LfUsername:        authUser.UserName,
 				EventType:         events.GithubOrganizationUpdated,
 				ExternalProjectID: params.ProjectSFID,
+				ProjectModel:      &v1Models.Project{ProjectExternalID: params.ProjectSFID},
 				EventData: &events.GithubOrganizationUpdatedEventData{
 					GithubOrganizationName: params.OrgName,
 					AutoEnabled:            *params.Body.AutoEnabled,

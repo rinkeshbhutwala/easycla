@@ -59,7 +59,7 @@ require (
 	golang.org/x/oauth2 v0.0.0-20200107190931-bf48bf16ab8d
 	golang.org/x/sys v0.0.0-20200622182413-4b0db7f3f76b // indirect
 	golang.org/x/text v0.3.3 // indirect
-	google.golang.org/appengine v1.6.6 // indirect
+	google.golang.org/appengine v1.6.6
 	google.golang.org/protobuf v1.24.0 // indirect
 	gopkg.in/ini.v1 v1.57.0 // indirect
 )

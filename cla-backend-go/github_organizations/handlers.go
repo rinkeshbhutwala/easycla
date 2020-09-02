@@ -82,10 +82,12 @@ func Configure(api *operations.ClaAPI, service Service, eventService events.Serv
 			if err != nil {
 				return github_organizations.NewUpdateProjectGithubOrganizationConfigBadRequest().WithPayload(errorResponse(err))
 			}
+
 			eventService.LogEvent(&events.LogEventArgs{
 				UserID:            claUser.UserID,
 				EventType:         events.GithubOrganizationUpdated,
 				ExternalProjectID: params.ProjectSFID,
+				LfUsername:        claUser.LFUsername,
 				EventData: &events.GithubOrganizationUpdatedEventData{
 					GithubOrganizationName: params.OrgName,
 					AutoEnabled:            *params.Body.AutoEnabled,
