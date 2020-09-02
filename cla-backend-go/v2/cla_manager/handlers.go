@@ -30,6 +30,8 @@ const (
 	Conflict = "409"
 	// NotFound error Response code
 	NotFound = "404"
+	//NoContent Response code
+	NoContent = "204"
 )
 
 // Configure is the API handler routine for CLA Manager routes
@@ -128,7 +130,7 @@ func Configure(api *operations.EasyclaAPI, service Service, LfxPortalURL string,
 				"Email":        params.Body.UserEmail.String(),
 				"authUser":     *params.XUSERNAME,
 			}
-			log.WithFields(f).Debugf("processing CLA Manager Desginee by group request")
+			log.WithFields(f).Debugf("processing CLA Manager Designee by group request")
 
 			log.WithFields(f).Debugf("getting project IDs for CLA group")
 			projectCLAGroups, getErr := projectClaGroupRepo.GetProjectsIdsForClaGroup(params.ClaGroupID)
@@ -206,6 +208,9 @@ func Configure(api *operations.EasyclaAPI, service Service, LfxPortalURL string,
 						Message: msg,
 						Code:    Conflict,
 					})
+			}
+			if statusCode == NoContent {
+				return cla_manager.NewCreateCLAManagerRequestNoContent()
 			}
 
 			return cla_manager.NewCreateCLAManagerRequestBadRequest().WithPayload(
@@ -302,6 +307,10 @@ func buildErrorStatusCode(err error) string {
 	// Check if user is already assigned scope/role
 	if err == ErrRoleScopeConflict {
 		return Conflict
+	}
+	// Check if user does not exiss
+	if err == ErrNoLFID {
+		return NoContent
 	}
 	// Return Bad Request
 	return BadRequest

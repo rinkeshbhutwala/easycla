@@ -55,15 +55,15 @@ var (
 	//ErrLFXUserNotFound when user-service fails to find user
 	ErrLFXUserNotFound = errors.New("lfx user not found")
 	//ErrNoLFID thrown when users dont have an LFID
-	ErrNoLFID = errors.New("user has no LFID")
+	ErrNoLFID = errors.New("user has no LF Login")
 	//ErrNotInOrg when user is not in organization
 	ErrNotInOrg = errors.New("user not in organization")
 	//ErrNoOrgAdmins when No admins found for organization
 	ErrNoOrgAdmins = errors.New("no admins in company")
 	//ErrRoleScopeConflict thrown if user already has role scope
-	ErrRoleScopeConflict = errors.New("user is already cla-manager-designee")
+	ErrRoleScopeConflict = errors.New("user is already cla-manager")
 	//ErrCLAManagerDesigneeConflict when user is already assigned cla-manager-designee role
-	ErrCLAManagerDesigneeConflict = errors.New("user already assigned cla-manager-designee")
+	ErrCLAManagerDesigneeConflict = errors.New("user already assigned cla-manager")
 	//ErrScopeNotFound returns error when getting scopeID
 	ErrScopeNotFound = errors.New("scope not found")
 	//ErrProjectSigned returns error if project already signed
@@ -175,7 +175,7 @@ func (s *service) CreateCLAManager(claGroupID string, params cla_manager.CreateC
 	if userErr != nil {
 		designeeName := fmt.Sprintf("%s %s", *params.Body.FirstName, *params.Body.LastName)
 		designeeEmail := params.Body.UserEmail.String()
-		msg := fmt.Sprintf("User does not have an LFID account and has been sent an email invite: %s.", *params.Body.UserEmail)
+		msg := fmt.Sprintf("User does not have an LF Login account and has been sent an email invite: %s.", *params.Body.UserEmail)
 		log.Warn(msg)
 		sendEmailErr := sendEmailToUserWithNoLFID(claGroup.ProjectName, authUsername, *managerUser.Emails[0].EmailAddress, designeeName, designeeEmail, organizationSF.ID, nil, "cla-manager")
 		if sendEmailErr != nil {
@@ -204,7 +204,7 @@ func (s *service) CreateCLAManager(claGroupID string, params cla_manager.CreateC
 	}
 
 	if claUser == nil {
-		msg := fmt.Sprintf("User not found when searching by LFID: %s and shall be created", user.Username)
+		msg := fmt.Sprintf("User not found when searching by LF Login: %s and shall be created", user.Username)
 		log.Debug(msg)
 		userName := fmt.Sprintf("%s %s", *params.Body.FirstName, *params.Body.LastName)
 		_, currentTimeString := utils.CurrentTime()
@@ -566,7 +566,18 @@ func (s *service) CreateCLAManagerDesignee(companyID string, projectID string, u
 
 //CreateCLAManagerDesigneeByGroup creates designee by group for cla manager prospect
 func (s *service) CreateCLAManagerDesigneeByGroup(params cla_manager.CreateCLAManagerDesigneeByGroupParams, projectCLAGroups []*projects_cla_groups.ProjectClaGroup, f logrus.Fields) ([]*models.ClaManagerDesignee, string, error) {
+	acsClient := v2AcsService.GetClient()
+	orgClient := v2OrgService.GetClient()
+	userEmail := params.Body.UserEmail.String()
+
 	var designeeScopes []*models.ClaManagerDesignee
+
+	org, orgErr := orgClient.GetOrganization(params.CompanySFID)
+	if orgErr != nil {
+		msg := fmt.Sprintf("Getting organization by ID: %s failed", params.CompanySFID)
+		return nil, msg, orgErr
+	}
+
 	foundationSFID := projectCLAGroups[0].FoundationSFID
 	if foundationSFID != "" {
 		claManagerDesignee, err := s.CreateCLAManagerDesignee(params.CompanySFID, foundationSFID, params.Body.UserEmail.String())
@@ -596,6 +607,23 @@ func (s *service) CreateCLAManagerDesigneeByGroup(params cla_manager.CreateCLAMa
 			designeeScopes = append(designeeScopes, claManagerDesignee)
 		}
 
+	}
+
+	// Assign company owner role
+
+	//Get Role ID
+	roleID, designeeErr := acsClient.GetRoleID("company-owner")
+	if designeeErr != nil {
+		msg := "Problem getting role ID for company-owner"
+		log.WithFields(f).Warn(msg)
+		return nil, msg, designeeErr
+	}
+
+	err := orgClient.CreateOrgUserRoleOrgScope(userEmail, org.ID, roleID)
+	if err != nil {
+		msg := "Failed to assign company-owner role to user"
+		log.WithFields(f).Warnf("Organization Service - Failed to assign company-owner role to user: %s, error: %+v ", userEmail, err)
+		return nil, msg, err
 	}
 	return designeeScopes, "", nil
 }
@@ -674,7 +702,7 @@ func (s *service) CreateCLAManagerRequest(contactAdmin bool, companyID string, p
 	userService := v2UserService.GetClient()
 	lfxUser, userErr := userService.SearchUserByEmail(userEmail)
 	if userErr != nil {
-		msg := fmt.Sprintf("EasyCLA - 400 Bad Request - User: %s does not have an LFID ", userEmail)
+		msg := fmt.Sprintf("User: %s does not have an LF Login ", userEmail)
 		log.Warn(msg)
 		// Send email
 		sendEmailErr := sendEmailToUserWithNoLFID(projectSF.Name, authUser.UserName, authUser.Email, fullName, userEmail, companyModel.ID, &projectSF.ID, "cla-manager-designee")
@@ -773,7 +801,7 @@ func (s *service) InviteCompanyAdmin(contactAdmin bool, companyID string, projec
 	// Get suggested CLA Manager user details
 	user, userErr := userService.SearchUserByEmail(userEmail)
 	if userErr != nil {
-		msg := fmt.Sprintf("UserEmail: %s has no LFID and has been sent an invite email to create an account , error: %+v", userEmail, userErr)
+		msg := fmt.Sprintf("UserEmail: %s has no LF Login and has been sent an invite email to create an account , error: %+v", userEmail, userErr)
 		log.Warn(msg)
 		// Send Email
 		var contributorEmail *string
@@ -1048,7 +1076,7 @@ func sendEmailToCLAManagerDesignee(corporateConsole string, companyName string, 
 // sendEmailToUserWithNoLFID helper function to send email to a given user with no LFID
 func sendEmailToUserWithNoLFID(projectName, requesterUsername, requesterEmail, userWithNoLFIDName, userWithNoLFIDEmail, organizationID string, projectID *string, role string) error {
 	// subject string, body string, recipients []string
-	subject := "EasyCLA: Invitation to create LFID and complete process of becoming CLA Manager"
+	subject := "EasyCLA: Invitation to create LF Login and complete process of becoming CLA Manager"
 	body := fmt.Sprintf(`
 <p>Hello %s,</p>
 <p>This is a notification email from EasyCLA regarding the Project %s in the EasyCLA system.</p>
