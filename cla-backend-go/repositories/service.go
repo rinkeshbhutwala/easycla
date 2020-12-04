@@ -33,6 +33,7 @@ type Service interface {
 	DisableRepositoriesByProjectID(ctx context.Context, projectID string) (int, error)
 	GetRepositoriesByCLAGroup(ctx context.Context, claGroupID string) ([]*models.GithubRepository, error)
 	GetRepositoriesByOrganizationName(ctx context.Context, gitHubOrgName string) ([]*models.GithubRepository, error)
+	DeleteGithubOrgByRepositoryDetails(ctx context.Context, projectID string) (int, error)
 }
 
 // GithubOrgRepo provide method to get github organization by name
@@ -40,6 +41,7 @@ type GithubOrgRepo interface {
 	GetGithubOrganizationByName(ctx context.Context, githubOrganizationName string) (*models.GithubOrganizations, error)
 	GetGithubOrganization(ctx context.Context, githubOrganizationName string) (*models.GithubOrganization, error)
 	GetGithubOrganizations(ctx context.Context, projectSFID string) (*models.GithubOrganizations, error)
+	DeleteGithubOrganization(ctx context.Context, projectSFID string, githubOrgName string) error
 }
 
 type service struct {
@@ -195,4 +197,28 @@ func (s *service) GetRepositoriesByCLAGroup(ctx context.Context, claGroupID stri
 // GetRepositoriesByOrganizationName get repositories by organization name
 func (s *service) GetRepositoriesByOrganizationName(ctx context.Context, gitHubOrgName string) ([]*models.GithubRepository, error) {
 	return s.repo.GetRepositoriesByOrganizationName(ctx, gitHubOrgName)
+}
+
+// DeleteGithubOrgByRepositoryDetails Delete the github org by project ID and org name.
+func (s *service) DeleteGithubOrgByRepositoryDetails(ctx context.Context, projectID string) (int, error) {
+	// Return the list of GitHub repositories by CLA Group for those that are currently enabled
+	ghOrgs, err := s.repo.GetCLAGroupRepositoriesGroupByOrgs(ctx, projectID, true)
+	if err != nil {
+		return 0, err
+	}
+	ghOrgCount := 0
+	for _, ghOrg := range ghOrgs {
+		log.Debugf("Deleting github org %s", ghOrg.OrganizationName)
+		ghOrgCount = ghOrgCount + 1
+	inner:
+		for _, item := range ghOrg.List {
+			deleteErr := s.ghOrgRepo.DeleteGithubOrganization(ctx, item.ProjectSFID, ghOrg.OrganizationName)
+			if deleteErr != nil {
+				log.Warnf("Unable to remove github org: %s for project :%s error :%v", ghOrg.OrganizationName, item.ProjectSFID, deleteErr)
+			}
+			break inner
+		}
+	}
+
+	return ghOrgCount, nil
 }

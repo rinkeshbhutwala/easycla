@@ -704,6 +704,35 @@ func (s *service) DeleteCLAGroup(ctx context.Context, claGroupModel *v1Models.Cl
 	}(claGroupModel, authUser)
 	goRoutineCount++
 
+	go func(claGroup *v1Models.ClaGroup, authUser *auth.User) {
+		// Delete github repositories
+		log.WithFields(f).Debug("deleting CLA Group GitHub orgs...")
+		numDeleted, delGHReposErr := s.repositoriesService.DeleteGithubOrgByRepositoryDetails(ctx, claGroup.ProjectID)
+		if delGHReposErr != nil {
+			log.WithFields(f).Warn(delGHReposErr)
+			errChan <- delGHReposErr
+			return
+		}
+		if numDeleted > 0 {
+			log.WithFields(f).Debugf("deleted %d github repositories", numDeleted)
+			// Log github delete event
+			s.eventsService.LogEvent(&events.LogEventArgs{
+				EventType:     events.GithubOrganizationDeleted,
+				ClaGroupModel: claGroup,
+				LfUsername:    authUser.UserName,
+				EventData: &events.GithubProjectDeletedEventData{
+					DeletedCount: numDeleted,
+				},
+			})
+		} else {
+			log.WithFields(f).Debug("no github orgs found to delete")
+		}
+
+		// No errors - nice...return nil
+		errChan <- nil
+	}(claGroupModel, authUser)
+	goRoutineCount++
+
 	// Invalidate project signatures
 	go func(claGroup *v1Models.ClaGroup, authUser *auth.User) {
 		log.WithFields(f).Debug("invalidating all signatures for CLA Group...")
